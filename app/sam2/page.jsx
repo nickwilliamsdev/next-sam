@@ -30,7 +30,10 @@ export default function Home() {
     const canvas = canvasEl.current
     const imgTensor = canvasToTensor(resizeCanvas(canvas, {w: 1024, h: 1024}))
     await sam.current.embedImage(imgTensor)
+  }
 
+  const decodeMask = async () => {
+    await sam.current.decode()
   }
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function Home() {
         <CardContent>
           <div className="space-y-4">
             <Button onClick={embedImage}>Embed image</Button>
+            <Button onClick={decodeMask}>Decode</Button>
             <canvas ref={canvasEl}/>
           </div>
         </CardContent>

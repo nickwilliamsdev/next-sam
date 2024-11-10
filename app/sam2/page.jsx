@@ -13,6 +13,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
+import { getImageData, canvasToTensor, resizeCanvas } from "@/lib/imageutils"
+
 import { SAM2 } from "./SAM2"
 
 import { 
@@ -21,11 +23,13 @@ import {
 
 export default function Home() {
   const sam = useRef(null)
-  // const [sentiment, setSentiment] = useState("Unknown")
-  // const [text, setText] = useState("")
+  const canvasEl = useRef(null)
+  const [imageURL, setImageURL] = useState("/photo.png")
 
   const embedImage = async () => {
-    await sam.current.embedImage()
+    const canvas = canvasEl.current
+    const imgTensor = canvasToTensor(resizeCanvas(canvas, {w: 1024, h: 1024}))
+    await sam.current.embedImage(imgTensor)
 
   }
 
@@ -35,11 +39,19 @@ export default function Home() {
     }
   }, []);
 
-  // useEffect(() => {
-  //   if (bert.current) {
-  //     predict(text)
-  //   }
-  // }, [text]);
+  useEffect(() => {
+    if (imageURL) {
+      const img = new Image();
+      img.src = imageURL
+      img.onload = function() {
+        const canvas = canvasEl.current
+        var ctx = canvas.getContext('2d');
+        canvas.width = 512
+        canvas.height = 512
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height );
+      }
+    }
+  }, [imageURL]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -50,6 +62,7 @@ export default function Home() {
         <CardContent>
           <div className="space-y-4">
             <Button onClick={embedImage}>Embed image</Button>
+            <canvas ref={canvasEl}/>
           </div>
         </CardContent>
       </Card>

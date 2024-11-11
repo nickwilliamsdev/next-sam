@@ -3,7 +3,6 @@ import { AutoTokenizer } from '@huggingface/transformers';
 
 import { Tensor } from 'onnxruntime-web';
 
-
 export class SAM2 {
   static session = null
   image_encoded = null
@@ -18,10 +17,14 @@ export class SAM2 {
   }
 
   constructor() {
-    SAM2.getSession()
+
   }
 
-  async embedImage(inputTensor) {
+  async waitForSession() {
+    await SAM2.getSession()
+  }
+
+  async encodeImage(inputTensor) {
     console.log("embedImage")
     const session = await SAM2.getSession()
     const results = await session.run({image: inputTensor});

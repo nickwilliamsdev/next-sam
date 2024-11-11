@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, createContext } from 'react';
 
 import { Tensor } from 'onnxruntime-web';
-import { getImageData, canvasToTensor, resizeCanvas, sliceTensorMask } from "@/lib/imageutils"
-import { SAM2 } from "./SAM2"
+import { getImageData, canvasToFloat32Array, resizeCanvas, sliceTensorMask } from "@/lib/imageutils"
+// import { SAM2 } from "./SAM2"
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,22 +13,38 @@ import { LoaderCircle } from 'lucide-react'
 
 
 export default function Home() {
-  const sam = useRef(null)
+  // const sam = useRef(null)
+  const [loading, setLoading] = useState(false)
+  const [samWorkerReady, setSamWorkerReady] = useState(false)
+  const [imageEncoded, setImageEncoded] = useState(false)
+
+  const samWorker = useRef(null)
   const canvasEl = useRef(null)
   const [imageURL, setImageURL] = useState("/photo.png")
 
-  const embedImage = async () => {
+  const encodeImage = async () => {
     const canvas = canvasEl.current
-    const imgTensor = canvasToTensor(resizeCanvas(canvas, {w: 1024, h: 1024}))
-    await sam.current.embedImage(imgTensor)
+    const float32Data = canvasToFloat32Array(resizeCanvas(canvas, {w: 1024, h: 1024}))
+
+    samWorker.current.postMessage({ 
+      type: 'encodeImage',
+      data: float32Data
+    });   
+    setLoading(true)
   }
 
   const decodeMask = async (point) => {
-    const decodingResults = await sam.current.decode(point) // decodingResults = [B=1, Masks, W, H]
+    samWorker.current.postMessage({ 
+      type: 'decodeMask',
+      data: point
+    });   
+  }
+
+  const drawMask = (decodingResults) => {
 
     // SAM2 returns 3 mask along with scores -> select best one    
     const maskTensors = decodingResults.masks
-    const maskScores = decodingResults.iou_predictions.data
+    const maskScores = decodingResults.iou_predictions.cpuData
     const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores))
     const maskCanvas = sliceTensorMask(maskTensors, bestMaskIdx)    
 
@@ -39,6 +55,10 @@ export default function Home() {
   }
 
   const imageClick = (event) => {
+    if (!imageEncoded) {
+      return
+    }
+
     const canvas = canvasEl.current
     const rect = event.target.getBoundingClientRect();
 
@@ -52,12 +72,33 @@ export default function Home() {
     decodeMask(point)
   }
 
+  const onWorkerMessage = (event) => {
+    const {type, data} = event.data
+
+    // console.log("Main thread onWorkerMessage")
+    // console.log(event.data)
+
+    if (type == "pong" ) {
+      setLoading(false)
+      setSamWorkerReady(true)
+    } else if (type == "encodeImageDone" ) {
+      setLoading(false)
+      setImageEncoded(true)
+    } else if (type == "decodeMaskResult" ) {
+      drawMask(data) 
+    }
+  }
+
 
   useEffect(() => {
-    if (!sam.current) {
-      sam.current = new SAM2()
+    if (!samWorker.current) {
+      samWorker.current = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+      samWorker.current.addEventListener('message', onWorkerMessage)
+      samWorker.current.postMessage({ type: 'ping' });   
+
+      setLoading(true)
     }
-  }, []);
+  })
 
   useEffect(() => {
     if (imageURL) {
@@ -81,8 +122,20 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Button onClick={embedImage}>Embed image</Button>
-            <Button onClick={decodeMask}>Decode</Button>
+            <Button 
+              onClick={encodeImage}
+              disabled={loading || (samWorkerReady && imageEncoded)}
+            >
+              <p className="flex items-center gap-2">
+              { loading &&
+                  <LoaderCircle className="animate-spin w-6 h-6" />
+              }
+              { loading && !samWorkerReady && "Loading model"}
+              { !loading && samWorkerReady && !imageEncoded && "Encode image"}
+              { loading && samWorkerReady && !imageEncoded && "Encoding"}
+              { !loading && samWorkerReady && imageEncoded && "Ready. Click on image"}
+              </p>
+            </Button>
             <canvas ref={canvasEl} onClick={imageClick}/>
           </div>
         </CardContent>

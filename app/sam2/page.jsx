@@ -25,12 +25,16 @@ export default function Home() {
 
   const decodeMask = async (point) => {
     const decodingResults = await sam.current.decode(point) // decodingResults = [B=1, Masks, W, H]
-    const maskTensor = decodingResults.masks
-    const maskCanvas = sliceTensorMask(maskTensor, 0)    
 
+    // SAM2 returns 3 mask along with scores -> select best one    
+    const maskTensors = decodingResults.masks
+    const maskScores = decodingResults.iou_predictions.data
+    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores))
+    const maskCanvas = sliceTensorMask(maskTensors, bestMaskIdx)    
+
+    // draw mask on top of input image
     const targetCanvas = canvasEl.current
     const maskCanvasResized = resizeCanvas(maskCanvas, {w: targetCanvas.width, h: targetCanvas.height})
-
     targetCanvas.getContext('2d').drawImage(maskCanvasResized, 0, 0);
   }
 

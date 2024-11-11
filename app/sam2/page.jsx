@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef, createContext } from 'react';
 
+import { Tensor } from 'onnxruntime-web';
+
 import {
   Card,
   CardContent,
@@ -13,7 +15,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 
-import { getImageData, canvasToTensor, resizeCanvas } from "@/lib/imageutils"
+import ndarray from 'ndarray';
+import unpack from 'ndarray-unpack';
+
+
+import { getImageData, canvasToTensor, resizeCanvas, sliceTensorMask } from "@/lib/imageutils"
 
 import { SAM2 } from "./SAM2"
 
@@ -32,9 +38,37 @@ export default function Home() {
     await sam.current.embedImage(imgTensor)
   }
 
-  const decodeMask = async () => {
-    await sam.current.decode()
+  const decodeMask = async (pos) => {
+    const decodingResults = await sam.current.decode(pos) // [B=1, Masks, W, H]
+    const maskTensor = decodingResults.masks
+    // const maskTensor = new Tensor('int32', [0, 0, 0, 0, 1, 0, 0, 0, 0], [1, 1, 3, 3])
+    const maskCanvas = sliceTensorMask(maskTensor, 0)    
+
+    const targetCanvas = canvasEl.current
+    const maskCanvasResized = resizeCanvas(maskCanvas, {w: targetCanvas.width, h: targetCanvas.height})
+
+    targetCanvas.getContext('2d').drawImage(maskCanvasResized, 0, 0);
   }
+
+  const imageClick = (event) => {
+    const canvas = canvasEl.current
+    const rect = event.target.getBoundingClientRect();
+    const pos = {
+      // point: {
+      //   x: event.clientX - rect.left,
+      //   y: event.clientY - rect.top
+      // },
+      point: {
+        x: (event.clientX - rect.left) / canvas.width * 1024,
+        y: (event.clientY - rect.top) / canvas.height * 1024
+      },
+      label: 1
+    }
+    console.log(pos.point)
+
+    decodeMask(pos)
+  }
+
 
   useEffect(() => {
     if (!sam.current) {
@@ -66,7 +100,7 @@ export default function Home() {
           <div className="space-y-4">
             <Button onClick={embedImage}>Embed image</Button>
             <Button onClick={decodeMask}>Decode</Button>
-            <canvas ref={canvasEl}/>
+            <canvas ref={canvasEl} onClick={imageClick}/>
           </div>
         </CardContent>
       </Card>

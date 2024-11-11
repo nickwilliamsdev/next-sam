@@ -3,29 +3,14 @@
 import React, { useState, useEffect, useRef, createContext } from 'react';
 
 import { Tensor } from 'onnxruntime-web';
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-
-import ndarray from 'ndarray';
-import unpack from 'ndarray-unpack';
-
-
 import { getImageData, canvasToTensor, resizeCanvas, sliceTensorMask } from "@/lib/imageutils"
-
 import { SAM2 } from "./SAM2"
 
-import { 
-  LoaderCircle, 
-} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { LoaderCircle } from 'lucide-react'
+
 
 export default function Home() {
   const sam = useRef(null)
@@ -38,10 +23,9 @@ export default function Home() {
     await sam.current.embedImage(imgTensor)
   }
 
-  const decodeMask = async (pos) => {
-    const decodingResults = await sam.current.decode(pos) // [B=1, Masks, W, H]
+  const decodeMask = async (point) => {
+    const decodingResults = await sam.current.decode(point) // decodingResults = [B=1, Masks, W, H]
     const maskTensor = decodingResults.masks
-    // const maskTensor = new Tensor('int32', [0, 0, 0, 0, 1, 0, 0, 0, 0], [1, 1, 3, 3])
     const maskCanvas = sliceTensorMask(maskTensor, 0)    
 
     const targetCanvas = canvasEl.current
@@ -53,20 +37,15 @@ export default function Home() {
   const imageClick = (event) => {
     const canvas = canvasEl.current
     const rect = event.target.getBoundingClientRect();
-    const pos = {
-      // point: {
-      //   x: event.clientX - rect.left,
-      //   y: event.clientY - rect.top
-      // },
-      point: {
-        x: (event.clientX - rect.left) / canvas.width * 1024,
-        y: (event.clientY - rect.top) / canvas.height * 1024
-      },
+
+    // input image will be resized to 1024x1024 -> also normalize pos to 1024x1024
+    const point = {
+      x: (event.clientX - rect.left) / canvas.width * 1024,
+      y: (event.clientY - rect.top) / canvas.height * 1024,
       label: 1
     }
-    console.log(pos.point)
 
-    decodeMask(pos)
+    decodeMask(point)
   }
 
 

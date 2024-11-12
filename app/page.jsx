@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
-import { Crop } from 'lucide-react';
+import { Crop, ImageUp } from 'lucide-react';
 
 // Image manipulations
 import { resizeCanvas, mergeMasks, maskImageCanvas, resizeAndPadBox, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
@@ -25,10 +25,11 @@ export default function Home() {
   const samWorker = useRef(null)
   const [image, setImage] = useState(null)    // canvas
   const [mask, setMask] = useState(null)    // canvas
-  // const [imageURL, setImageURL] = useState("/image_landscape.png")
-  const [imageURL, setImageURL] = useState("/image_portrait.png")
+  const [imageURL, setImageURL] = useState("/image_landscape.png")
+  // const [imageURL, setImageURL] = useState("/image_portrait.png")
   // const [imageURL, setImageURL] = useState("/image_square.png")
   const canvasEl = useRef(null)
+  const fileInputEl = useRef(null)
 
   // Start encoding image
   const encodeImageClick = async () => {
@@ -52,17 +53,6 @@ export default function Home() {
 
     samWorker.current.postMessage({ type: 'decodeMask', data: point });   
     setLoading(true)
-  }
-
-  // Crop image with mask
-  const croplick = (event) => {
-    const link = document.createElement("a");
-    link.href = maskImageCanvas(image, mask).toDataURL();
-    link.download = "crop.png";
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   // Decoding finished -> parse result and update mask
@@ -98,6 +88,28 @@ export default function Home() {
     }
   }
 
+  // Crop image with mask
+  const cropClick = (event) => {
+    const link = document.createElement("a");
+    link.href = maskImageCanvas(image, mask).toDataURL();
+    link.download = "crop.png";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Upload new image
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0]
+    const dataURL = window.URL.createObjectURL(file)
+
+    setImage(null)
+    setMask(null)
+    setImageEncoded(false)
+    setImageURL(dataURL)
+  }
+  
   // Load web worker 
   useEffect(() => {
     if (!samWorker.current) {
@@ -158,7 +170,7 @@ export default function Home() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="flex gap-4">
+            <div className="flex justify-between gap-4">
               <Button onClick={encodeImageClick} disabled={loading || (samWorkerReady && imageEncoded)}>
                 <p className="flex items-center gap-2">
                 { loading &&
@@ -172,15 +184,17 @@ export default function Home() {
                 </p>
               </Button>
               { samWorkerReady && imageEncoded && mask &&
-                <Button onClick={croplick} variant="secondary"><Crop/> Crop</Button>
+                <Button onClick={cropClick} variant="secondary"><Crop/> Crop</Button>
               }
+              <Button onClick={()=>{fileInputEl.current.click()}} variant="secondary" disabled={loading}><ImageUp/> Change image</Button>
             </div>
             <div className="flex justify-center">
-              <canvas width={512} height={512} ref={canvasEl} onClick={imageClick}/>
+              <canvas ref={canvasEl} width={512} height={512} onClick={imageClick}/>
             </div>
           </div>
         </CardContent>
       </Card>
+      <input ref={fileInputEl} hidden="True" accept="image/*" type='file' onInput={handleFileUpload} />
     </div>
   );
 }

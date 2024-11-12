@@ -153,7 +153,7 @@ export default function Home() {
           <CardTitle>Next/SAM2 - Image Segmentation in the browser with onnxruntime-web and Meta's SAM2</CardTitle>
         </CardHeader>
         <CardContent>
-          <div>
+          <div className="flex flex-col">
             <div className="flex gap-4">
               <Button onClick={encodeImageClick} disabled={loading || (samWorkerReady && imageEncoded)}>
                 <p className="flex items-center gap-2">

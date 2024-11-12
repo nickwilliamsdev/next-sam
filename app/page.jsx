@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, createContext, useCallback } from 'react';
+import { Analytics } from '@vercel/analytics/next';
 
 // UI
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -210,6 +211,7 @@ export default function Home() {
         </CardContent>
       </Card>
       <input ref={fileInputEl} hidden="True" accept="image/*" type='file' onInput={handleFileUpload} />
+      <Analytics />
     </div>
   );
 }

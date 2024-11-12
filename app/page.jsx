@@ -1,62 +1,41 @@
 "use client"
 
-import React, { useState, useEffect, useRef, createContext } from 'react';
+import React, { useState, useEffect, useRef, createContext, useCallback } from 'react';
 
-import { Tensor } from 'onnxruntime-web';
-import { getImageData, canvasToFloat32Array, resizeCanvas, sliceTensorMask } from "@/lib/imageutils"
-// import { SAM2 } from "./SAM2"
-
+// UI
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
 
+// Image manipulations
+import { resizeCanvas, mergeMasks, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
 
 export default function Home() {
-  // const sam = useRef(null)
+  // state
   const [loading, setLoading] = useState(false)
   const [samWorkerReady, setSamWorkerReady] = useState(false)
   const [imageEncoded, setImageEncoded] = useState(false)
 
+  // web worker, image and mask
   const samWorker = useRef(null)
-  const canvasEl = useRef(null)
+  const [image, setImage] = useState(null)    // canvas
+  const [mask, setMask] = useState(null)    // canvas
   const [imageURL, setImageURL] = useState("/photo.png")
+  const canvasEl = useRef(null)
 
-  const encodeImage = async () => {
+  // Start encoding image
+  const encodeImageClick = async () => {
     const canvas = canvasEl.current
     const float32Data = canvasToFloat32Array(resizeCanvas(canvas, {w: 1024, h: 1024}))
 
-    samWorker.current.postMessage({ 
-      type: 'encodeImage',
-      data: float32Data
-    });   
+    samWorker.current.postMessage({ type: 'encodeImage', data: float32Data });   
     setLoading(true)
   }
 
-  const decodeMask = async (point) => {
-    samWorker.current.postMessage({ 
-      type: 'decodeMask',
-      data: point
-    });   
-  }
-
-  const drawMask = (decodingResults) => {
-    // SAM2 returns 3 mask along with scores -> select best one    
-    const maskTensors = decodingResults.masks
-    const maskScores = decodingResults.iou_predictions.cpuData
-    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores))
-    const maskCanvas = sliceTensorMask(maskTensors, bestMaskIdx)    
-
-    // draw mask on top of input image
-    const targetCanvas = canvasEl.current
-    const maskCanvasResized = resizeCanvas(maskCanvas, {w: targetCanvas.width, h: targetCanvas.height})
-    targetCanvas.getContext('2d').drawImage(maskCanvasResized, 0, 0);
-  }
-
+  // Start decoding, prompt with mouse coords
   const imageClick = (event) => {
-    if (!imageEncoded) {
-      return
-    }
+    if (!imageEncoded) return;
 
     const canvas = canvasEl.current
     const rect = event.target.getBoundingClientRect();
@@ -68,14 +47,31 @@ export default function Home() {
       label: 1
     }
 
-    decodeMask(point)
+    samWorker.current.postMessage({ type: 'decodeMask', data: point });   
+    setLoading(true)
   }
 
+  // Decoding finished -> parse result and update mask
+  const handleDecodingResults = (decodingResults) => {
+    // SAM2 returns 3 mask along with scores -> select best one    
+    const maskTensors = decodingResults.masks
+    const maskScores = decodingResults.iou_predictions.cpuData
+    const bestMaskIdx = maskScores.indexOf(Math.max(...maskScores))
+    const maskCanvas = sliceTensorMask(maskTensors, bestMaskIdx)    
+
+    setMask((prevMask) => {
+      if (prevMask) {
+        return mergeMasks(maskCanvas, prevMask)
+      } else {
+        return resizeCanvas(maskCanvas, {w: canvasEl.current.width, h: canvasEl.current.height})
+      }
+    })
+    setLoading(false)
+  }
+
+  // Handle web worker messages
   const onWorkerMessage = (event) => {
     const {type, data} = event.data
-
-    // console.log("Main thread onWorkerMessage")
-    // console.log(event.data)
 
     if (type == "pong" ) {
       setLoading(false)
@@ -84,11 +80,11 @@ export default function Home() {
       setLoading(false)
       setImageEncoded(true)
     } else if (type == "decodeMaskResult" ) {
-      drawMask(data) 
+      handleDecodingResults(data) 
     }
   }
 
-
+  // Load web worker 
   useEffect(() => {
     if (!samWorker.current) {
       samWorker.current = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -97,21 +93,47 @@ export default function Home() {
 
       setLoading(true)
     }
-  })
+  }, [onWorkerMessage, handleDecodingResults])
 
+  // Load image, store in offscreen canvas
   useEffect(() => {
     if (imageURL) {
       const img = new Image();
       img.src = imageURL
       img.onload = function() {
-        const canvas = canvasEl.current
-        var ctx = canvas.getContext('2d');
-        canvas.width = 512
-        canvas.height = 512
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height );
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        canvas.getContext('2d').drawImage(img, 0, 0)
+        setImage(canvas)
       }
     }
   }, [imageURL]);
+
+  // Offscreen canvas changed, draw it 
+  useEffect(() => {
+    if (image) {
+      const canvas = canvasEl.current
+      const ctx = canvas.getContext('2d');
+      canvas.width = 512
+      canvas.height = 512
+      ctx.drawImage(image, 0, 0, image.width, image.height,
+        0, 0, canvas.width, canvas.height);      
+    }
+  }, [image]);
+
+  // Mask changed, draw original image again and mask on top with some alpha
+  useEffect(() => {
+    if (mask) {
+      const canvas = canvasEl.current
+      const ctx = canvas.getContext('2d')
+
+      ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);      
+      ctx.globalAlpha = 0.4
+      canvas.getContext('2d').drawImage(mask, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+  }, [mask, image])
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -122,7 +144,7 @@ export default function Home() {
         <CardContent>
           <div className="space-y-4">
             <Button 
-              onClick={encodeImage}
+              onClick={encodeImageClick}
               disabled={loading || (samWorkerReady && imageEncoded)}
             >
               <p className="flex items-center gap-2">
@@ -133,6 +155,7 @@ export default function Home() {
               { !loading && samWorkerReady && !imageEncoded && "Encode image"}
               { loading && samWorkerReady && !imageEncoded && "Encoding"}
               { !loading && samWorkerReady && imageEncoded && "Ready. Click on image"}
+              { loading && samWorkerReady && imageEncoded && "Decoding"}
               </p>
             </Button>
             <canvas ref={canvasEl} onClick={imageClick}/>

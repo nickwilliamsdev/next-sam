@@ -4,32 +4,34 @@ import { Tensor } from 'onnxruntime-web';
 const sam = new SAM2()
 
 self.onmessage = async (e) => {
-    console.log("worker received message")
+  console.log("worker received message")
 
-    const { type, data } = e.data;
+  const { type, data } = e.data;
 
-    if (type === 'ping') {
-        await sam.waitForSession()
-        self.postMessage({ type: 'pong' })
+  if (type === 'ping') {
+    self.postMessage({ type: 'downloadInProgress' })
+    await sam.downloadModels()
 
-    } else if (type === 'encodeImage') {
-        const {float32Array, shape} = data
-        const imgTensor = new Tensor("float32", float32Array, shape);
+    self.postMessage({ type: 'loadingInProgress' })
+    await sam.createSessions()
 
-        await sam.encodeImage(imgTensor)
+    self.postMessage({ type: 'pong' })
 
-        self.postMessage({ type: 'encodeImageDone' })
+  } else if (type === 'encodeImage') {
+    const {float32Array, shape} = data
+    const imgTensor = new Tensor("float32", float32Array, shape);
 
-    } else if (type === 'decodeMask') {
-        const point = data
-        const decodingResults = await sam.decode(point) // decodingResults = Tensor [B=1, Masks, W, H]
+    await sam.encodeImage(imgTensor)
 
-        self.postMessage({ 
-            type: 'decodeMaskResult',
-            data: decodingResults
-        })
+    self.postMessage({ type: 'encodeImageDone' })
 
-    } else {
-        throw new Error(`Unknown message type: ${type}`);
-    }
+  } else if (type === 'decodeMask') {
+    const point = data
+    const decodingResults = await sam.decode(point) // decodingResults = Tensor [B=1, Masks, W, H]
+
+    self.postMessage({ type: 'decodeMaskResult', data: decodingResults })
+
+  } else {
+    throw new Error(`Unknown message type: ${type}`);
+  }
 }

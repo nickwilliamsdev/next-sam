@@ -18,8 +18,8 @@ export default function Home() {
 
   // state
   const [loading, setLoading] = useState(false)
-  const [samWorkerReady, setSamWorkerReady] = useState(false)
   const [imageEncoded, setImageEncoded] = useState(false)
+  const [status, setStatus] = useState("")
 
   // web worker, image and mask
   const samWorker = useRef(null)
@@ -34,7 +34,9 @@ export default function Home() {
   // Start encoding image
   const encodeImageClick = async () => {
     samWorker.current.postMessage({ type: 'encodeImage', data: canvasToFloat32Array(resizeCanvas(image, imageSize)) });   
+
     setLoading(true)
+    setStatus("Encoding")
   }
 
   // Start decoding, prompt with mouse coords
@@ -51,8 +53,10 @@ export default function Home() {
       label: 1
     }
 
-    samWorker.current.postMessage({ type: 'decodeMask', data: point });   
+    samWorker.current.postMessage({ type: 'decodeMask', data: point });  
+
     setLoading(true)
+    setStatus("Decoding")
   }
 
   // Decoding finished -> parse result and update mask
@@ -70,7 +74,6 @@ export default function Home() {
         return resizeCanvas(maskCanvas, imageSize)
       }
     })
-    setLoading(false)
   }
 
   // Handle web worker messages
@@ -79,12 +82,18 @@ export default function Home() {
 
     if (type == "pong" ) {
       setLoading(false)
-      setSamWorkerReady(true)
+      setStatus("Encode image")
+    } else if (type == "downloadInProgress" || type == "loadingInProgress") {
+      setLoading(true)
+      setStatus("Loading model")
     } else if (type == "encodeImageDone" ) {
-      setLoading(false)
       setImageEncoded(true)
+      setLoading(false)
+      setStatus("Ready. Click on image")
     } else if (type == "decodeMaskResult" ) {
       handleDecodingResults(data) 
+      setLoading(false)
+      setStatus("Ready. Click on image")
     }
   }
 
@@ -107,6 +116,7 @@ export default function Home() {
     setImage(null)
     setMask(null)
     setImageEncoded(false)
+    setStatus("Encode image")
     setImageURL(dataURL)
   }
 
@@ -150,7 +160,7 @@ export default function Home() {
     }
   }, [image]);
 
-  // Mask changed, draw original image again and mask on top with some alpha
+  // Mask changed, draw original image and mask on top with some alpha
   useEffect(() => {
     if (mask) {
       const canvas = canvasEl.current
@@ -182,19 +192,13 @@ export default function Home() {
         <CardContent>
           <div className="flex flex-col gap-4">
             <div className="flex justify-between gap-4">
-              <Button onClick={encodeImageClick} disabled={loading || (samWorkerReady && imageEncoded)}>
+              <Button onClick={encodeImageClick} disabled={loading || imageEncoded}>
                 <p className="flex items-center gap-2">
-                { loading &&
-                    <LoaderCircle className="animate-spin w-6 h-6" />
-                }
-                { loading && !samWorkerReady && "Loading model"}
-                { !loading && samWorkerReady && !imageEncoded && "Encode image"}
-                { loading && samWorkerReady && !imageEncoded && "Encoding"}
-                { !loading && samWorkerReady && imageEncoded && "Ready. Click on image"}
-                { loading && samWorkerReady && imageEncoded && "Decoding"}
+                  { loading && <LoaderCircle className="animate-spin w-6 h-6" /> }
+                  {status}
                 </p>
               </Button>
-              { samWorkerReady && imageEncoded && mask &&
+              { mask &&
                 <Button onClick={cropClick} variant="secondary"><Crop/> Crop</Button>
               }
               <Button onClick={()=>{fileInputEl.current.click()}} variant="secondary" disabled={loading}><ImageUp/> Change image</Button>

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
 
 // Image manipulations
-import { resizeCanvas, mergeMasks, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
+import { resizeCanvas, mergeMasks, maskImageCanvas, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
 
 export default function Home() {
   // state
@@ -49,6 +49,17 @@ export default function Home() {
 
     samWorker.current.postMessage({ type: 'decodeMask', data: point });   
     setLoading(true)
+  }
+
+  // Crop image with mask
+  const croplick = (event) => {
+    const link = document.createElement("a");
+    link.href = maskImageCanvas(image, mask).toDataURL();
+    link.download = "crop.png";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   // Decoding finished -> parse result and update mask
@@ -142,23 +153,25 @@ export default function Home() {
           <CardTitle>Next/SAM2 - Image Segmentation in the browser with onnxruntime-web and Meta's SAM2</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <Button 
-              onClick={encodeImageClick}
-              disabled={loading || (samWorkerReady && imageEncoded)}
-            >
-              <p className="flex items-center gap-2">
-              { loading &&
-                  <LoaderCircle className="animate-spin w-6 h-6" />
+          <div>
+            <div className="flex gap-4">
+              <Button onClick={encodeImageClick} disabled={loading || (samWorkerReady && imageEncoded)}>
+                <p className="flex items-center gap-2">
+                { loading &&
+                    <LoaderCircle className="animate-spin w-6 h-6" />
+                }
+                { loading && !samWorkerReady && "Loading model"}
+                { !loading && samWorkerReady && !imageEncoded && "Encode image"}
+                { loading && samWorkerReady && !imageEncoded && "Encoding"}
+                { !loading && samWorkerReady && imageEncoded && "Ready. Click on image"}
+                { loading && samWorkerReady && imageEncoded && "Decoding"}
+                </p>
+              </Button>
+              { samWorkerReady && imageEncoded && mask &&
+                <Button onClick={croplick} variant="secondary">Crop</Button>
               }
-              { loading && !samWorkerReady && "Loading model"}
-              { !loading && samWorkerReady && !imageEncoded && "Encode image"}
-              { loading && samWorkerReady && !imageEncoded && "Encoding"}
-              { !loading && samWorkerReady && imageEncoded && "Ready. Click on image"}
-              { loading && samWorkerReady && imageEncoded && "Decoding"}
-              </p>
-            </Button>
-            <canvas ref={canvasEl} onClick={imageClick}/>
+            </div>
+            <canvas className="m-4" ref={canvasEl} onClick={imageClick}/>
           </div>
         </CardContent>
       </Card>

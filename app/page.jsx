@@ -25,13 +25,13 @@ export default function Home() {
   const [image, setImage] = useState(null)    // canvas
   const [mask, setMask] = useState(null)    // canvas
   // const [imageURL, setImageURL] = useState("/image_landscape.png")
-  // const [imageURL, setImageURL] = useState("/image_portrait.png")
-  const [imageURL, setImageURL] = useState("/image_square.png")
+  const [imageURL, setImageURL] = useState("/image_portrait.png")
+  // const [imageURL, setImageURL] = useState("/image_square.png")
   const canvasEl = useRef(null)
 
   // Start encoding image
   const encodeImageClick = async () => {
-    samWorker.current.postMessage({ type: 'encodeImage', data: canvasToFloat32Array(image) });   
+    samWorker.current.postMessage({ type: 'encodeImage', data: canvasToFloat32Array(resizeCanvas(image, imageSize)) });   
     setLoading(true)
   }
 
@@ -108,18 +108,18 @@ export default function Home() {
     }
   }, [onWorkerMessage, handleDecodingResults])
 
-  // Load image, store in offscreen canvas
+  // Load image, pad to square and store in offscreen canvas
   useEffect(() => {
     if (imageURL) {
       const img = new Image();
       img.src = imageURL
       img.onload = function() {
-        const canvas = document.createElement('canvas');
-        canvas.width = imageSize.w
-        canvas.height = imageSize.h
+        const largestDim = img.naturalWidth > img.naturalHeight ? img.naturalWidth : img.naturalHeight
+        const box = resizeAndPadBox({h: img.naturalHeight, w: img.naturalWidth}, {h: largestDim, w: largestDim})
 
-        // resize and pad img to fit into our 1024x1024 canvas
-        const box = resizeAndPadBox({h: img.naturalHeight, w: img.naturalWidth}, imageSize)
+        const canvas = document.createElement('canvas');
+        canvas.width = largestDim
+        canvas.height = largestDim
 
         canvas.getContext('2d').drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, box.x, box.y, box.w, box.h)
         setImage(canvas)

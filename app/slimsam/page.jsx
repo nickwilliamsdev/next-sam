@@ -60,7 +60,7 @@ export default function Home() {
     }
 
     if (!imageURL) {
-      setImageURL("/photo.png")
+      setImageURL("/image_square.png")
     }
   });
 

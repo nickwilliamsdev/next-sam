@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
+import { Crop } from 'lucide-react';
 
 // Image manipulations
 import { resizeCanvas, mergeMasks, maskImageCanvas, resizeAndPadBox, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
@@ -171,7 +172,7 @@ export default function Home() {
                 </p>
               </Button>
               { samWorkerReady && imageEncoded && mask &&
-                <Button onClick={croplick} variant="secondary">Crop</Button>
+                <Button onClick={croplick} variant="secondary"><Crop/> Crop</Button>
               }
             </div>
             <div className="flex justify-center">

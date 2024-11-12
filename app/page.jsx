@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
-import { Crop, ImageUp } from 'lucide-react';
+import { Crop, ImageUp, Github } from 'lucide-react';
 
 // Image manipulations
 import { resizeCanvas, mergeMasks, maskImageCanvas, resizeAndPadBox, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
@@ -44,7 +44,7 @@ export default function Home() {
     const canvas = canvasEl.current
     const rect = event.target.getBoundingClientRect();
 
-    // input image will be resized to 1024x1024 -> also normalize pos to 1024x1024
+    // input image will be resized to 1024x1024 -> normalize mouse pos to 1024x1024
     const point = {
       x: (event.clientX - rect.left) / canvas.width * imageSize.w,
       y: (event.clientY - rect.top) / canvas.height * imageSize.h,
@@ -109,7 +109,7 @@ export default function Home() {
     setImageEncoded(false)
     setImageURL(dataURL)
   }
-  
+
   // Load web worker 
   useEffect(() => {
     if (!samWorker.current) {
@@ -165,8 +165,18 @@ export default function Home() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-2xl">
+        <div className="absolute top-4 right-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open('https://github.com/geronimi73/next-sam', '_blank')}
+          >
+            <Github className="w-4 h-4 mr-2" />
+            View on GitHub
+          </Button>
+        </div>
         <CardHeader>
-          <CardTitle>Next/SAM2 - Image Segmentation in the browser with onnxruntime-web and Meta's SAM2</CardTitle>
+          <CardTitle>Clientside Image Segmentation with onnxruntime-web and Meta's SAM2</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">

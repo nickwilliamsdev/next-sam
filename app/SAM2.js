@@ -4,29 +4,37 @@ import { AutoTokenizer } from '@huggingface/transformers';
 import { Tensor } from 'onnxruntime-web';
 
 export class SAM2 {
-  static session = null
+  static sessionEncoder = null
+  static sessionDecoder = null
   image_encoded = null
 
-  static async getSession() {
-    if (!this.session) {
-      this.session = await ort.InferenceSession.create('/onnx/sam2_hiera_tiny_encoder.with_runtime_opt.ort')
-      console.log('onnxruntime-web inference session created')  
+  static async getEncoderSession() {
+    if (!this.sessionEncoder) {
+      this.sessionEncoder = await ort.InferenceSession.create('/onnx/sam2_hiera_tiny_encoder.with_runtime_opt.ort')
+      console.log('onnxruntime-web encoder session created')  
     }
 
-    return this.session
+    return this.sessionEncoder
   }
 
-  constructor() {
+  static async getDecoderSession() {
+    if (!this.sessionDecoder) {
+      this.sessionDecoder = await ort.InferenceSession.create('/onnx/sam2_hiera_tiny_decoder.onnx')
+      console.log('onnxruntime-web decoder session created')  
+    }
 
+    return this.sessionDecoder
   }
+
+  constructor() { }
 
   async waitForSession() {
-    await SAM2.getSession()
+    await SAM2.getEncoderSession()
   }
 
   async encodeImage(inputTensor) {
     console.log("embedImage")
-    const session = await SAM2.getSession()
+    const session = await SAM2.getEncoderSession()
     const results = await session.run({image: inputTensor});
 
     this.image_encoded = {
@@ -38,9 +46,7 @@ export class SAM2 {
   }
 
   async decode(point) {
-    const session = await ort.InferenceSession.create(
-        '/onnx/sam2_hiera_tiny_decoder.onnx'
-    )
+    const session = await SAM2.getDecoderSession()
 
     const inputs = {
       image_embed: this.image_encoded.image_embed, 

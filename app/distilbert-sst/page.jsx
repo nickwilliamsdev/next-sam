@@ -50,7 +50,7 @@ export default function Home() {
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle>distilbert-sst</CardTitle>
+          <CardTitle>Next/distilbert-sst</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

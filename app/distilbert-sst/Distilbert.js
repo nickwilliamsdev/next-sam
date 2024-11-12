@@ -3,8 +3,6 @@
 import * as ort from 'onnxruntime-web';
 import { AutoTokenizer } from '@huggingface/transformers';
 
-// import * as ort from "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/esm/ort.min.js";
-
 export class DistilbertSST {
   static session = null
 

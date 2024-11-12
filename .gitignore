@@ -3,3 +3,4 @@
 /.next
 .DS_Store
 /app/storage
+/public/onnx

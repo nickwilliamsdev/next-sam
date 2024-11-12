@@ -9,9 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { LoaderCircle } from 'lucide-react'
 
 // Image manipulations
-import { resizeCanvas, mergeMasks, maskImageCanvas, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
+import { resizeCanvas, mergeMasks, maskImageCanvas, resizeAndPadBox, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
 
 export default function Home() {
+  // resize+pad all images to 1024x1024
+  const imageSize = {w: 1024, h: 1024}
+
   // state
   const [loading, setLoading] = useState(false)
   const [samWorkerReady, setSamWorkerReady] = useState(false)
@@ -21,15 +24,14 @@ export default function Home() {
   const samWorker = useRef(null)
   const [image, setImage] = useState(null)    // canvas
   const [mask, setMask] = useState(null)    // canvas
-  const [imageURL, setImageURL] = useState("/photo.png")
+  // const [imageURL, setImageURL] = useState("/image_landscape.png")
+  // const [imageURL, setImageURL] = useState("/image_portrait.png")
+  const [imageURL, setImageURL] = useState("/image_square.png")
   const canvasEl = useRef(null)
 
   // Start encoding image
   const encodeImageClick = async () => {
-    const canvas = canvasEl.current
-    const float32Data = canvasToFloat32Array(resizeCanvas(canvas, {w: 1024, h: 1024}))
-
-    samWorker.current.postMessage({ type: 'encodeImage', data: float32Data });   
+    samWorker.current.postMessage({ type: 'encodeImage', data: canvasToFloat32Array(image) });   
     setLoading(true)
   }
 
@@ -42,8 +44,8 @@ export default function Home() {
 
     // input image will be resized to 1024x1024 -> also normalize pos to 1024x1024
     const point = {
-      x: (event.clientX - rect.left) / canvas.width * 1024,
-      y: (event.clientY - rect.top) / canvas.height * 1024,
+      x: (event.clientX - rect.left) / canvas.width * imageSize.w,
+      y: (event.clientY - rect.top) / canvas.height * imageSize.h,
       label: 1
     }
 
@@ -74,7 +76,7 @@ export default function Home() {
       if (prevMask) {
         return mergeMasks(maskCanvas, prevMask)
       } else {
-        return resizeCanvas(maskCanvas, {w: canvasEl.current.width, h: canvasEl.current.height})
+        return resizeCanvas(maskCanvas, imageSize)
       }
     })
     setLoading(false)
@@ -113,9 +115,13 @@ export default function Home() {
       img.src = imageURL
       img.onload = function() {
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth
-        canvas.height = img.naturalHeight
-        canvas.getContext('2d').drawImage(img, 0, 0)
+        canvas.width = imageSize.w
+        canvas.height = imageSize.h
+
+        // resize and pad img to fit into our 1024x1024 canvas
+        const box = resizeAndPadBox({h: img.naturalHeight, w: img.naturalWidth}, imageSize)
+
+        canvas.getContext('2d').drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, box.x, box.y, box.w, box.h)
         setImage(canvas)
       }
     }
@@ -126,10 +132,7 @@ export default function Home() {
     if (image) {
       const canvas = canvasEl.current
       const ctx = canvas.getContext('2d');
-      canvas.width = 512
-      canvas.height = 512
-      ctx.drawImage(image, 0, 0, image.width, image.height,
-        0, 0, canvas.width, canvas.height);      
+      ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);      
     }
   }, [image]);
 
@@ -141,7 +144,7 @@ export default function Home() {
 
       ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);      
       ctx.globalAlpha = 0.4
-      canvas.getContext('2d').drawImage(mask, 0, 0);
+      ctx.drawImage(mask, 0, 0, mask.width, mask.height, 0, 0, canvas.width, canvas.height);      
       ctx.globalAlpha = 1;
     }
   }, [mask, image])
@@ -172,7 +175,7 @@ export default function Home() {
               }
             </div>
             <div className="flex justify-center">
-              <canvas ref={canvasEl} onClick={imageClick}/>
+              <canvas width={512} height={512} ref={canvasEl} onClick={imageClick}/>
             </div>
           </div>
         </CardContent>

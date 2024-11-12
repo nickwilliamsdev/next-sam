@@ -25,9 +25,9 @@ export default function Home() {
   const samWorker = useRef(null)
   const [image, setImage] = useState(null)    // canvas
   const [mask, setMask] = useState(null)    // canvas
-  const [imageURL, setImageURL] = useState("/image_landscape.png")
+  // const [imageURL, setImageURL] = useState("/image_landscape.png")
   // const [imageURL, setImageURL] = useState("/image_portrait.png")
-  // const [imageURL, setImageURL] = useState("/image_square.png")
+  const [imageURL, setImageURL] = useState("/image_square.png")
   const canvasEl = useRef(null)
   const fileInputEl = useRef(null)
 
@@ -145,6 +145,7 @@ export default function Home() {
     if (image) {
       const canvas = canvasEl.current
       const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);      
     }
   }, [image]);

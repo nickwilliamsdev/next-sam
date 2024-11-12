@@ -153,7 +153,7 @@ export default function Home() {
           <CardTitle>Next/SAM2 - Image Segmentation in the browser with onnxruntime-web and Meta's SAM2</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-4">
             <div className="flex gap-4">
               <Button onClick={encodeImageClick} disabled={loading || (samWorkerReady && imageEncoded)}>
                 <p className="flex items-center gap-2">
@@ -171,7 +171,9 @@ export default function Home() {
                 <Button onClick={croplick} variant="secondary">Crop</Button>
               }
             </div>
-            <canvas className="m-4" ref={canvasEl} onClick={imageClick}/>
+            <div className="flex justify-center">
+              <canvas ref={canvasEl} onClick={imageClick}/>
+            </div>
           </div>
         </CardContent>
       </Card>

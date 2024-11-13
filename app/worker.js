@@ -21,9 +21,11 @@ self.onmessage = async (e) => {
     const {float32Array, shape} = data
     const imgTensor = new Tensor("float32", float32Array, shape);
 
+    const startTime = performance.now();
     await sam.encodeImage(imgTensor)
+    const durationMs = performance.now() - startTime;
 
-    self.postMessage({ type: 'encodeImageDone' })
+    self.postMessage({ type: 'encodeImageDone', data: {durationMs: durationMs} })
 
   } else if (type === 'decodeMask') {
     const point = data

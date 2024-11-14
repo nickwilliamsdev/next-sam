@@ -13,6 +13,8 @@ https://github.com/user-attachments/assets/0d3b9f3b-2ab1-4627-9662-fca1a7cc2289
 * Image upload 
 * Mask decoding based on point prompt
 * Cropping
+* Tested on macOS with Edge (webgpu, cpu), Chrome (webgpu, cpu), Firefox (cpu only), Safari (cpu only) 
+* Fails on iOS (17, iPhone SE), not sure why
 
 # Installation
 Clone the repository:

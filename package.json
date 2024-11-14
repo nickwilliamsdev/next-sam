@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.0.2",
     "@radix-ui/react-slot": "^1.1.0",
     "@vercel/analytics": "^1.4.0",
     "class-variance-authority": "^0.7.0",
@@ -17,6 +16,7 @@
     "lucide": "^0.456.0",
     "lucide-react": "^0.455.0",
     "next": "14.2.16",
+    "onnxruntime-web": "^1.20.0",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^2.5.4",

@@ -13,9 +13,9 @@ self.onmessage = async (e) => {
     await sam.downloadModels()
 
     self.postMessage({ type: 'loadingInProgress' })
-    await sam.createSessions()
+    const report = await sam.createSessions()
 
-    self.postMessage({ type: 'pong' })
+    self.postMessage({ type: 'pong', data: report })
 
   } else if (type === 'encodeImage') {
     const {float32Array, shape} = data

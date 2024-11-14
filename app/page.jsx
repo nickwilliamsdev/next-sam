@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, useRef, createContext, useCallback } from 'react';
 import { Analytics } from '@vercel/analytics/next';
+import { cn } from "@/lib/utils"
 
 // UI
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { LoaderCircle } from 'lucide-react'
-import { Crop, ImageUp, Github } from 'lucide-react';
+import { LoaderCircle, Crop, ImageUp, Github, LoaderPinwheel, Fan } from 'lucide-react'
 
 // Image manipulations
 import { resizeCanvas, mergeMasks, maskImageCanvas, resizeAndPadBox, canvasToFloat32Array, sliceTensorMask } from "@/lib/imageutils"
@@ -18,6 +18,7 @@ export default function Home() {
   const imageSize = {w: 1024, h: 1024}
 
   // state
+  const [device, setDevice] = useState(null)
   const [loading, setLoading] = useState(false)
   const [imageEncoded, setImageEncoded] = useState(false)
   const [status, setStatus] = useState("")
@@ -82,8 +83,15 @@ export default function Home() {
     const {type, data} = event.data
 
     if (type == "pong" ) {
-      setLoading(false)
-      setStatus("Encode image")
+      const {success, device} = data
+
+      if (success) {
+        setLoading(false)
+        setDevice(device)
+        setStatus("Encode image")
+      } else {
+        setStatus("Error")
+      }
     } else if (type == "downloadInProgress" || type == "loadingInProgress") {
       setLoading(true)
       setStatus("Loading model")
@@ -188,7 +196,14 @@ export default function Home() {
           </Button>
         </div>
         <CardHeader>
-          <CardTitle>Clientside Image Segmentation with onnxruntime-web and Meta's SAM2</CardTitle>
+          <CardTitle>
+            <p>Clientside Image Segmentation with onnxruntime-web and Meta's SAM2
+            </p>
+            <p className={cn("flex gap-1 items-center", device ? "visible" : "invisible")}>
+              <Fan color="#000" className="w-6 h-6 animate-[spin_2.5s_linear_infinite] direction-reverse"/>
+              Running on {device}
+            </p>              
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">

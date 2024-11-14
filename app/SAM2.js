@@ -1,6 +1,6 @@
 import path from 'path';
-import * as ort from 'onnxruntime-web';
-import { Tensor } from 'onnxruntime-web';
+
+import * as ort from 'onnxruntime-web/all';
 
 const ENCODER_URL = "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort"
 const DECODER_URL = "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder.onnx"
@@ -58,23 +58,44 @@ export class SAM2 {
   }
 
   async createSessions() {
-    await Promise.all([this.getEncoderSession(), this.getDecoderSession()])
+    const success = await this.getEncoderSession() && await this.getDecoderSession()
+    
+    return {
+      success: success,
+      device: success ? this.sessionEncoder[1] : null
+    }
+  }
+
+  async getORTSession(model) {
+    /** Creating a session with executionProviders: {"webgpu", "cpu"} fails
+     *  => "Error: multiple calls to 'initWasm()' detected."
+     *  but ONLY in Safari and Firefox (wtf)
+     *  seems to be related to web worker, see https://github.com/microsoft/onnxruntime/issues/22113
+     *  => loop through each ep, catch e if not available and move on
+     */
+    let session = null
+    for (let ep of ["webgpu", "cpu"]) {
+      try { session = await ort.InferenceSession.create(model, { executionProviders: [ep]}) }
+      catch (e) { continue }
+
+      return [session, ep]
+    }
   }
 
   async getEncoderSession() {
-    if (!this.sessionEncoder) this.sessionEncoder = await ort.InferenceSession.create(this.bufferEncoder)
+    if (!this.sessionEncoder) this.sessionEncoder = await this.getORTSession(this.bufferEncoder)
 
     return this.sessionEncoder
   }
 
   async getDecoderSession() {
-    if (!this.sessionDecoder) this.sessionDecoder = await ort.InferenceSession.create(this.bufferDecoder)
+    if (!this.sessionDecoder) this.sessionDecoder = await this.getORTSession(this.bufferDecoder)
 
     return this.sessionDecoder
   }
 
   async encodeImage(inputTensor) {
-    const session = await this.getEncoderSession()
+    const [session, device] = await this.getEncoderSession()
     const results = await session.run({image: inputTensor});
 
     this.image_encoded = {
@@ -85,17 +106,17 @@ export class SAM2 {
   }
 
   async decode(point) {
-    const session = await this.getDecoderSession()
+    const [session, device] = await this.getDecoderSession()
 
     const inputs = {
       image_embed: this.image_encoded.image_embed, 
       high_res_feats_0: this.image_encoded.high_res_feats_0, 
       high_res_feats_1: this.image_encoded.high_res_feats_1,
-      point_coords: new Tensor("float32", [point.x, point.y], [1, 1, 2]), 
-      point_labels: new Tensor("float32", [point.label], [1, 1]), 
-      mask_input: new Tensor("float32", new Float32Array(256 * 256), [1, 1, 256, 256]), 
-      has_mask_input: new Tensor("float32", [0], [1]), 
-      orig_im_size: new Tensor("int32", [1024, 1024], [2])
+      point_coords: new ort.Tensor("float32", [point.x, point.y], [1, 1, 2]), 
+      point_labels: new ort.Tensor("float32", [point.label], [1, 1]), 
+      mask_input: new ort.Tensor("float32", new Float32Array(256 * 256), [1, 1, 256, 256]), 
+      has_mask_input: new ort.Tensor("float32", [0], [1]), 
+      orig_im_size: new ort.Tensor("int32", [1024, 1024], [2])
     }
 
     return await session.run(inputs);

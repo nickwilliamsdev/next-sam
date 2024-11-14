@@ -7,8 +7,7 @@ const nextConfig = {
         // See https://webpack.js.org/configuration/resolve/#resolvealias
         config.resolve.alias = {
             ...config.resolve.alias,
-            "onnxruntime-node$": false,
-            '@huggingface/transformers': path.resolve(__dirname, 'node_modules/@huggingface/transformers'),
+            "onnxruntime-web/all": path.join(__dirname, 'node_modules/onnxruntime-web/dist/ort.all.bundle.min.mjs'),
         }
         return config;
     },

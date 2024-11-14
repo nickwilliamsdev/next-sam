@@ -3,11 +3,12 @@ This is a Next.js application that performs image segmentation using Meta's Segm
 
 Demo at [sam2-seven.vercel.app](https://sam2-seven.vercel.app/)
 
-https://github.com/user-attachments/assets/37497882-6dfa-4c4e-b344-f5d86bed43f6
+https://github.com/user-attachments/assets/0d3b9f3b-2ab1-4627-9662-fca1a7cc2289
 
 # Features
 * Utilizes Meta's SAM2 model for segmentation
 * onnxruntime-web for model inference
+* webgpu with fallback to CPU if not available or not supported by browser
 * Model storage using OPFS ([not working](https://bugs.webkit.org/show_bug.cgi?id=231706) in Safari)
 * Image upload 
 * Mask decoding based on point prompt

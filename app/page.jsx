@@ -90,12 +90,13 @@ export default function Home() {
         setDevice(device)
         setStatus("Encode image")
       } else {
-        setStatus("Error")
+        setStatus("Error (check JS console)")
       }
     } else if (type == "downloadInProgress" || type == "loadingInProgress") {
       setLoading(true)
       setStatus("Loading model")
     } else if (type == "encodeImageDone" ) {
+      // alert(data.durationMs)
       setImageEncoded(true)
       setLoading(false)
       setStatus("Ready. Click on image")

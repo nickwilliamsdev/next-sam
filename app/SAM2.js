@@ -1,6 +1,9 @@
 import path from 'path';
 
 import * as ort from 'onnxruntime-web/all';
+// ort.env.wasm.numThreads=1
+// ort.env.wasm.simd = false;
+
 
 const ENCODER_URL = "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_encoder.with_runtime_opt.ort"
 const DECODER_URL = "https://huggingface.co/g-ronimo/sam2-tiny/resolve/main/sam2_hiera_tiny_decoder.onnx"
@@ -76,7 +79,7 @@ export class SAM2 {
     let session = null
     for (let ep of ["webgpu", "cpu"]) {
       try { session = await ort.InferenceSession.create(model, { executionProviders: [ep]}) }
-      catch (e) { continue }
+      catch (e) { console.error(e); continue }
 
       return [session, ep]
     }

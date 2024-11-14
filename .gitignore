@@ -5,3 +5,5 @@
 /app/storage
 /public/onnx
 /app/distilbert-sst
+/app/api
+lib/serverlog.js

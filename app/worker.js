@@ -4,7 +4,7 @@ import { Tensor } from 'onnxruntime-web';
 const sam = new SAM2()
 
 self.onmessage = async (e) => {
-  console.log("worker received message")
+  // console.log("worker received message")
 
   const { type, data } = e.data;
 

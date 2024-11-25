@@ -38,7 +38,14 @@ export class SAM2 {
     console.log("File " + filename + " not in cache, downloading from " + url)
     let buffer = null
     try {
-      buffer = await fetch(url).then(response => response.arrayBuffer());
+      buffer = await fetch(
+        url,
+        {
+          headers: new Headers({
+              Origin: location.origin,
+          }),
+          mode: 'cors',
+        }).then(response => response.arrayBuffer());
     }
     catch (e) {
       console.error("Download of " + url + " failed: ", e)

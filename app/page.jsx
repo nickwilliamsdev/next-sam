@@ -107,6 +107,16 @@ export default function Home() {
     }
   }
 
+  const decodeAll = (event) => {
+    // decode full image
+    if (!imageEncoded) return;
+
+    samWorker.current.postMessage({ type: 'decodeAll', data: null });  
+
+    setLoading(true)
+    setStatus("Decoding")
+  }
+
   // Crop image with mask
   const cropClick = (event) => {
     const link = document.createElement("a");
@@ -219,6 +229,7 @@ export default function Home() {
                 <Button onClick={cropClick} variant="secondary"><Crop/> Crop</Button>
               }
               <Button onClick={()=>{fileInputEl.current.click()}} variant="secondary" disabled={loading}><ImageUp/> Change image</Button>
+              <Button onClick={decodeAll} variant="secondary" disabled={loading}> Decode All</Button>
             </div>
             <div className="flex justify-center">
               <canvas ref={canvasEl} width={512} height={512} onClick={imageClick}/>

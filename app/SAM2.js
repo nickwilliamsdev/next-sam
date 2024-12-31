@@ -131,4 +131,61 @@ export class SAM2 {
 
     return await session.run(inputs);
   }
+
+  async decodeFull() {
+    const [session, device] = await this.getDecoderSession()
+
+    const inputs = {
+      image_embed: this.image_encoded.image_embed, 
+      high_res_feats_0: this.image_encoded.high_res_feats_0, 
+      high_res_feats_1: this.image_encoded.high_res_feats_1,
+      point_coords: new ort.Tensor("float32", [], []), 
+      point_labels: new ort.Tensor("float32", [], []), 
+      mask_input: new ort.Tensor("float32", new Float32Array(256 * 256), [1, 1, 256, 256]), 
+      has_mask_input: new ort.Tensor("float32", [0], [1]), 
+      orig_im_size: new ort.Tensor("int32", [1024, 1024], [2])
+    }
+
+    return await session.run(inputs);
+  }
+
+  generateCropBoxes(imageWidth, imageHeight, layers, overlapRatio) {
+    const cropBoxes = [];
+    const layerScales = Array.from({ length: layers }, (_, i) => Math.pow(2, i));
+
+    for (const scale of layerScales) {
+        const cropWidth = imageWidth / scale;
+        const cropHeight = imageHeight / scale;
+        const stepX = cropWidth * (1 - overlapRatio);
+        const stepY = cropHeight * (1 - overlapRatio);
+
+        for (let y = 0; y < imageHeight; y += stepY) {
+            for (let x = 0; x < imageWidth; x += stepX) {
+                const x0 = Math.floor(x);
+                const y0 = Math.floor(y);
+                const x1 = Math.min(imageWidth, Math.ceil(x + cropWidth));
+                const y1 = Math.min(imageHeight, Math.ceil(y + cropHeight));
+                cropBoxes.push([x0, y0, x1, y1]);
+            }
+        }
+    }
+    return cropBoxes;
+  }
+  batchProcess(points, batchSize) {
+    const batches = [];
+    for (let i = 0; i < points.length; i += batchSize) {
+        batches.push(points.slice(i, i + batchSize));
+    }
+    return batches;
+  }
+  // Generate automatic prompts (e.g., grid points)
+  generatePrompts(height, width, gridSpacing = 16) {
+    const prompts = [];
+    for (let y = 0; y < height; y += gridSpacing) {
+        for (let x = 0; x < width; x += gridSpacing) {
+            prompts.push([y, x, 1]); // (y, x, is_positive)
+        }
+    }
+    return new Float32Array(prompts.flat());
+  }
 }

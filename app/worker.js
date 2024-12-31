@@ -33,6 +33,11 @@ self.onmessage = async (e) => {
 
     self.postMessage({ type: 'decodeMaskResult', data: decodingResults })
 
+  } else if (type == "decodeAll") {
+
+    const decodeResult = await sam.decodeFull();
+    self.postMessage({ type: 'decodeMaskResult', data: decodeResult });
+  
   } else {
     throw new Error(`Unknown message type: ${type}`);
   }

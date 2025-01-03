@@ -15,7 +15,7 @@ export class SAM2 {
   sessionDecoder = null
   image_encoded = null
 
-  constructor() { }
+  constructor(pointsPerSide = 64) { this.pointsPerSide = pointsPerSide; }
 
   async downloadModels() {
     this.bufferEncoder = await this.downloadModel(ENCODER_URL)

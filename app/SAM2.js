@@ -148,44 +148,60 @@ export class SAM2 {
 
     return await session.run(inputs);
   }
+  
+  buildPointGrid(pointsPerSide, imageWidth, imageHeight) {
+    const stepX = imageWidth / (pointsPerSide - 1);
+    const stepY = imageHeight / (pointsPerSide - 1);
 
-  generateCropBoxes(imageWidth, imageHeight, layers, overlapRatio) {
-    const cropBoxes = [];
-    const layerScales = Array.from({ length: layers }, (_, i) => Math.pow(2, i));
-
-    for (const scale of layerScales) {
-        const cropWidth = imageWidth / scale;
-        const cropHeight = imageHeight / scale;
-        const stepX = cropWidth * (1 - overlapRatio);
-        const stepY = cropHeight * (1 - overlapRatio);
-
-        for (let y = 0; y < imageHeight; y += stepY) {
-            for (let x = 0; x < imageWidth; x += stepX) {
-                const x0 = Math.floor(x);
-                const y0 = Math.floor(y);
-                const x1 = Math.min(imageWidth, Math.ceil(x + cropWidth));
-                const y1 = Math.min(imageHeight, Math.ceil(y + cropHeight));
-                cropBoxes.push([x0, y0, x1, y1]);
-            }
+    const points = [];
+    for (let y = 0; y < pointsPerSide; y++) {
+        for (let x = 0; x < pointsPerSide; x++) {
+            points.push([x * stepX, y * stepY]);
         }
     }
-    return cropBoxes;
+    return points;
   }
-  batchProcess(points, batchSize) {
+
+  linspace(start, end, num) {
+    const step = (end - start) / (num - 1);
+    return Array.from({ length: num }, (_, i) => start + i * step);
+  }
+
+  tile(array, shape) {
+      const [rows, cols] = shape;
+      const result = [];
+      for (let i = 0; i < rows; i++) {
+          const row = [];
+          for (let j = 0; j < cols; j++) {
+              row.push(array[j % array.length]);
+          }
+          result.push(row);
+      }
+      return result;
+  }
+
+  createPoints(n_per_side) {
+      const offset = 1 / (2 * n_per_side);
+      const points_one_side = linspace(offset, 1 - offset, n_per_side);
+
+      const points_x = tile([points_one_side], [n_per_side, 1]);
+      const points_y = tile(points_one_side.map(x => [x]), [1, n_per_side]);
+
+      const points = [];
+      for (let i = 0; i < points_x.length; i++) {
+          for (let j = 0; j < points_x[i].length; j++) {
+              points.push([points_x[i][j], points_y[i][j]]);
+          }
+      }
+
+      return points;
+  }
+
+  buildBatches(points, batchSize) {
     const batches = [];
     for (let i = 0; i < points.length; i += batchSize) {
         batches.push(points.slice(i, i + batchSize));
     }
     return batches;
-  }
-  // Generate automatic prompts (e.g., grid points)
-  generatePrompts(height, width, gridSpacing = 16) {
-    const prompts = [];
-    for (let y = 0; y < height; y += gridSpacing) {
-        for (let x = 0; x < width; x += gridSpacing) {
-            prompts.push([y, x, 1]); // (y, x, is_positive)
-        }
-    }
-    return new Float32Array(prompts.flat());
   }
 }
